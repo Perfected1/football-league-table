@@ -11,25 +11,44 @@ import (
 )
 
 func main() {
-	l := league.NewLeague()
+	reader := bufio.NewReader(os.Stdin)
 
-	// Add teams (now with validation)
-	teams := []string{"Arsenal", "Chelsea", "Liverpool", "Manchester City"}
+	// Ask for league size
+	fmt.Print("Enter number of teams in the league: ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
 
-	for _, t := range teams {
-		err := l.AddTeam(t)
+	capacity, err := strconv.Atoi(input)
+	if err != nil || capacity <= 0 {
+		fmt.Println("Invalid number of teams")
+		return
+	}
+
+	l := league.NewLeague(capacity)
+
+	fmt.Printf("\nYou can now enter %d teams\n\n", capacity)
+
+	// Register teams
+	for len(l.Teams) < capacity {
+		fmt.Printf("Enter team %d name: ", len(l.Teams)+1)
+		name, _ := reader.ReadString('\n')
+		name = strings.TrimSpace(name)
+
+		err := l.AddTeam(name)
 		if err != nil {
-			fmt.Println("Error adding team:", err)
+			fmt.Println("Error:", err)
+		} else {
+			fmt.Println("Added:", name)
 		}
 	}
 
-	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("\nLEAGUE FULL. You can now enter matches.\n")
 
-	fmt.Println("FOOTBALL LEAGUE CLI")
-	fmt.Println("Enter match results in format:")
+	fmt.Println("Match format:")
 	fmt.Println("HomeTeam, AwayTeam, HomeGoals, AwayGoals")
 	fmt.Println("Type 'exit' to stop\n")
 
+	// Match input loop
 	for {
 		fmt.Print("Enter match: ")
 		input, _ := reader.ReadString('\n')
@@ -52,7 +71,7 @@ func main() {
 		awayGoals, err2 := strconv.Atoi(strings.TrimSpace(parts[3]))
 
 		if err1 != nil || err2 != nil {
-			fmt.Println("Goals must be valid numbers.")
+			fmt.Println("Goals must be numbers")
 			continue
 		}
 
@@ -62,7 +81,7 @@ func main() {
 			continue
 		}
 
-		// Print updated table
+		// Print table
 		fmt.Println("\nUPDATED TABLE\n")
 
 		fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s %-4s\n",

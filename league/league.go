@@ -6,25 +6,32 @@ import (
 	"sort"
 )
 
-// League holds all teams.
+// League holds all teams with a fixed capacity.
 type League struct {
-	Teams []team.Team
+	Teams    []team.Team
+	Capacity int
 }
 
-// NewLeague creates a new league.
-func NewLeague() League {
+// NewLeague creates a league with a fixed number of teams allowed.
+func NewLeague(capacity int) League {
 	return League{
-		Teams: []team.Team{},
+		Teams:    []team.Team{},
+		Capacity: capacity,
 	}
 }
 
-// AddTeam adds a team to the league (with duplicate protection).
+// AddTeam adds a team if capacity is not exceeded and no duplicates exist.
 func (l *League) AddTeam(name string) error {
-	// Prevent duplicates
+	// Check duplicate
 	for _, t := range l.Teams {
 		if t.Name == name {
 			return errors.New("team already exists: " + name)
 		}
+	}
+
+	// Check capacity limit
+	if len(l.Teams) >= l.Capacity {
+		return errors.New("league is full. maximum teams allowed reached")
 	}
 
 	l.Teams = append(l.Teams, team.Team{Name: name})
@@ -41,22 +48,20 @@ func (l *League) findTeam(name string) *team.Team {
 	return nil
 }
 
-// RecordMatch updates stats after a match with validation.
+// RecordMatch updates stats after a match.
 func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) error {
 	homeTeam := l.findTeam(home)
 	awayTeam := l.findTeam(away)
 
-	// Validate teams exist
+	if home == away {
+		return errors.New("a team cannot play itself")
+	}
+
 	if homeTeam == nil {
 		return errors.New("unknown team: " + home)
 	}
 	if awayTeam == nil {
 		return errors.New("unknown team: " + away)
-	}
-
-	// Prevent same team playing itself
-	if home == away {
-		return errors.New("a team cannot play itself")
 	}
 
 	homeTeam.Played++
@@ -86,7 +91,7 @@ func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) error 
 	return nil
 }
 
-// Standings returns sorted league table.
+// Standings returns sorted table.
 func (l *League) Standings() []team.Team {
 	sorted := make([]team.Team, len(l.Teams))
 	copy(sorted, l.Teams)
