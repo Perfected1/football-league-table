@@ -4,80 +4,101 @@ import (
 	"errors"
 	"football-league-table/team"
 	"sort"
+	"strings"
 )
 
-// League holds all teams with a fixed capacity.
+// League uses map-based storage (stable references)
 type League struct {
-	Teams    []team.Team
+	Teams    map[string]*team.Team
+	Order    []string
 	Capacity int
 }
 
-// NewLeague creates a league with a fixed number of teams allowed.
+// NewLeague creates league
 func NewLeague(capacity int) League {
 	return League{
-		Teams:    []team.Team{},
+		Teams:    make(map[string]*team.Team),
+		Order:    []string{},
 		Capacity: capacity,
 	}
 }
 
-// AddTeam adds a team if capacity is not exceeded and no duplicates exist.
+// normalize input
+func normalize(s string) string {
+	return strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(s), " ", ""))
+}
+
+// AddTeam registers team
 func (l *League) AddTeam(name string) error {
-	// Check duplicate
-	for _, t := range l.Teams {
-		if t.Name == name {
-			return errors.New("team already exists: " + name)
-		}
-	}
-
-	// Check capacity limit
 	if len(l.Teams) >= l.Capacity {
-		return errors.New("league is full. maximum teams allowed reached")
+		return errors.New("league is full")
 	}
 
-	l.Teams = append(l.Teams, team.Team{Name: name})
+	key := normalize(name)
+
+	if _, exists := l.Teams[key]; exists {
+		return errors.New("team already exists: " + name)
+	}
+
+	t := &team.Team{
+		Name:  name,
+		Alias: team.GenerateAlias(name),
+	}
+
+	l.Teams[key] = t
+	l.Order = append(l.Order, key)
+
 	return nil
 }
 
-// findTeam returns pointer to a team.
-func (l *League) findTeam(name string) *team.Team {
-	for i := range l.Teams {
-		if l.Teams[i].Name == name {
-			return &l.Teams[i]
+// resolve team safely
+func (l *League) resolve(input string) (*team.Team, error) {
+	key := normalize(input)
+
+	if t, ok := l.Teams[key]; ok {
+		return t, nil
+	}
+
+	// alias fallback
+	for _, t := range l.Teams {
+		if normalize(t.Alias) == key {
+			return t, nil
 		}
 	}
-	return nil
+
+	return nil, errors.New("unknown team: " + input)
 }
 
-// RecordMatch updates stats after a match.
-func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) error {
-	homeTeam := l.findTeam(home)
-	awayTeam := l.findTeam(away)
-
-	if home == away {
-		return errors.New("a team cannot play itself")
+// RecordMatch updates stats
+func (l *League) RecordMatch(home, away string, hg, ag int) error {
+	if normalize(home) == normalize(away) {
+		return errors.New("team cannot play itself")
 	}
 
-	if homeTeam == nil {
-		return errors.New("unknown team: " + home)
+	homeTeam, err := l.resolve(home)
+	if err != nil {
+		return err
 	}
-	if awayTeam == nil {
-		return errors.New("unknown team: " + away)
+
+	awayTeam, err := l.resolve(away)
+	if err != nil {
+		return err
 	}
 
 	homeTeam.Played++
 	awayTeam.Played++
 
-	homeTeam.GoalsFor += homeGoals
-	homeTeam.GoalsAgainst += awayGoals
+	homeTeam.GoalsFor += hg
+	homeTeam.GoalsAgainst += ag
 
-	awayTeam.GoalsFor += awayGoals
-	awayTeam.GoalsAgainst += homeGoals
+	awayTeam.GoalsFor += ag
+	awayTeam.GoalsAgainst += hg
 
-	if homeGoals > awayGoals {
+	if hg > ag {
 		homeTeam.Won++
 		homeTeam.Points += 3
 		awayTeam.Lost++
-	} else if homeGoals < awayGoals {
+	} else if ag > hg {
 		awayTeam.Won++
 		awayTeam.Points += 3
 		homeTeam.Lost++
@@ -91,20 +112,23 @@ func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) error 
 	return nil
 }
 
-// Standings returns sorted table.
-func (l *League) Standings() []team.Team {
-	sorted := make([]team.Team, len(l.Teams))
-	copy(sorted, l.Teams)
+// Standings returns sorted table
+func (l *League) Standings() []*team.Team {
+	list := []*team.Team{}
 
-	sort.Slice(sorted, func(i, j int) bool {
-		if sorted[i].Points == sorted[j].Points {
-			if sorted[i].GoalDifference() == sorted[j].GoalDifference() {
-				return sorted[i].GoalsFor > sorted[j].GoalsFor
+	for _, t := range l.Teams {
+		list = append(list, t)
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].Points == list[j].Points {
+			if list[i].GoalDifference() == list[j].GoalDifference() {
+				return list[i].GoalsFor > list[j].GoalsFor
 			}
-			return sorted[i].GoalDifference() > sorted[j].GoalDifference()
+			return list[i].GoalDifference() > list[j].GoalDifference()
 		}
-		return sorted[i].Points > sorted[j].Points
+		return list[i].Points > list[j].Points
 	})
 
-	return sorted
+	return list
 }
