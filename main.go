@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"football-league-table/league"
 )
 
@@ -14,29 +19,59 @@ func main() {
 	l.AddTeam("Liverpool")
 	l.AddTeam("Manchester City")
 
-	// Matches
-	l.RecordMatch("Arsenal", "Chelsea", 2, 1)
-	l.RecordMatch("Liverpool", "Manchester City", 1, 1)
-	l.RecordMatch("Arsenal", "Liverpool", 3, 0)
-	l.RecordMatch("Manchester City", "Chelsea", 2, 0)
+	reader := bufio.NewReader(os.Stdin)
 
-	// Display table
-	fmt.Println("FOOTBALL LEAGUE TABLE\n")
+	fmt.Println("FOOTBALL LEAGUE CLI")
+	fmt.Println("Enter match results in format:")
+	fmt.Println("HomeTeam, AwayTeam, HomeGoals, AwayGoals")
+	fmt.Println("Type 'exit' to stop\n")
 
-	fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s %-4s\n",
-		"Team", "P", "W", "D", "L", "GF", "GA", "GD", "Pts")
+	for {
+		fmt.Print("Enter match: ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
 
-	for _, t := range l.Standings() {
-		fmt.Printf("%-20s %-3d %-3d %-3d %-3d %-4d %-4d %-4d %-4d\n",
-			t.Name,
-			t.Played,
-			t.Won,
-			t.Drawn,
-			t.Lost,
-			t.GoalsFor,
-			t.GoalsAgainst,
-			t.GoalDifference(),
-			t.Points,
-		)
+		if input == "exit" {
+			break
+		}
+
+		parts := strings.Split(input, ",")
+		if len(parts) != 4 {
+			fmt.Println("Invalid format. Try again.")
+			continue
+		}
+
+		home := strings.TrimSpace(parts[0])
+		away := strings.TrimSpace(parts[1])
+		homeGoals, err1 := strconv.Atoi(strings.TrimSpace(parts[2]))
+		awayGoals, err2 := strconv.Atoi(strings.TrimSpace(parts[3]))
+
+		if err1 != nil || err2 != nil {
+			fmt.Println("Goals must be numbers.")
+			continue
+		}
+
+		l.RecordMatch(home, away, homeGoals, awayGoals)
+
+		// Print updated table
+		fmt.Println("\nUPDATED TABLE\n")
+		fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s %-4s\n",
+			"Team", "P", "W", "D", "L", "GF", "GA", "GD", "Pts")
+
+		for _, t := range l.Standings() {
+			fmt.Printf("%-20s %-3d %-3d %-3d %-3d %-4d %-4d %-4d %-4d\n",
+				t.Name,
+				t.Played,
+				t.Won,
+				t.Drawn,
+				t.Lost,
+				t.GoalsFor,
+				t.GoalsAgainst,
+				t.GoalDifference(),
+				t.Points,
+			)
+		}
+
+		fmt.Println()
 	}
 }
