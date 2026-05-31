@@ -1,6 +1,7 @@
 package league
 
 import (
+	"errors"
 	"football-league-table/team"
 	"sort"
 )
@@ -17,9 +18,17 @@ func NewLeague() League {
 	}
 }
 
-// AddTeam adds a team to the league.
-func (l *League) AddTeam(name string) {
+// AddTeam adds a team to the league (with duplicate protection).
+func (l *League) AddTeam(name string) error {
+	// Prevent duplicates
+	for _, t := range l.Teams {
+		if t.Name == name {
+			return errors.New("team already exists: " + name)
+		}
+	}
+
 	l.Teams = append(l.Teams, team.Team{Name: name})
+	return nil
 }
 
 // findTeam returns pointer to a team.
@@ -32,13 +41,22 @@ func (l *League) findTeam(name string) *team.Team {
 	return nil
 }
 
-// RecordMatch updates stats after a match.
-func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) {
+// RecordMatch updates stats after a match with validation.
+func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) error {
 	homeTeam := l.findTeam(home)
 	awayTeam := l.findTeam(away)
 
-	if homeTeam == nil || awayTeam == nil {
-		return
+	// Validate teams exist
+	if homeTeam == nil {
+		return errors.New("unknown team: " + home)
+	}
+	if awayTeam == nil {
+		return errors.New("unknown team: " + away)
+	}
+
+	// Prevent same team playing itself
+	if home == away {
+		return errors.New("a team cannot play itself")
 	}
 
 	homeTeam.Played++
@@ -64,6 +82,8 @@ func (l *League) RecordMatch(home, away string, homeGoals, awayGoals int) {
 		homeTeam.Points++
 		awayTeam.Points++
 	}
+
+	return nil
 }
 
 // Standings returns sorted league table.

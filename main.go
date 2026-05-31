@@ -13,11 +13,15 @@ import (
 func main() {
 	l := league.NewLeague()
 
-	// Add teams
-	l.AddTeam("Arsenal")
-	l.AddTeam("Chelsea")
-	l.AddTeam("Liverpool")
-	l.AddTeam("Manchester City")
+	// Add teams (now with validation)
+	teams := []string{"Arsenal", "Chelsea", "Liverpool", "Manchester City"}
+
+	for _, t := range teams {
+		err := l.AddTeam(t)
+		if err != nil {
+			fmt.Println("Error adding team:", err)
+		}
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -37,24 +41,30 @@ func main() {
 
 		parts := strings.Split(input, ",")
 		if len(parts) != 4 {
-			fmt.Println("Invalid format. Try again.")
+			fmt.Println("Invalid format. Use: Home, Away, HG, AG")
 			continue
 		}
 
 		home := strings.TrimSpace(parts[0])
 		away := strings.TrimSpace(parts[1])
+
 		homeGoals, err1 := strconv.Atoi(strings.TrimSpace(parts[2]))
 		awayGoals, err2 := strconv.Atoi(strings.TrimSpace(parts[3]))
 
 		if err1 != nil || err2 != nil {
-			fmt.Println("Goals must be numbers.")
+			fmt.Println("Goals must be valid numbers.")
 			continue
 		}
 
-		l.RecordMatch(home, away, homeGoals, awayGoals)
+		err := l.RecordMatch(home, away, homeGoals, awayGoals)
+		if err != nil {
+			fmt.Println("Error:", err)
+			continue
+		}
 
 		// Print updated table
 		fmt.Println("\nUPDATED TABLE\n")
+
 		fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s %-4s\n",
 			"Team", "P", "W", "D", "L", "GF", "GA", "GD", "Pts")
 
