@@ -7,84 +7,146 @@ import (
 	"strings"
 )
 
-// League uses map-based storage (stable references)
+// League engine
 type League struct {
 	Teams    map[string]*team.Team
-	Order    []string
 	Capacity int
+
+	fixtures   map[string]int
+	maxGames   int
+	finished   bool
+	winner     *team.Team
 }
 
-// NewLeague creates league
+// NewLeague creates league with computed limits
 func NewLeague(capacity int) League {
 	return League{
 		Teams:    make(map[string]*team.Team),
-		Order:    []string{},
 		Capacity: capacity,
+		fixtures: make(map[string]int),
+		maxGames: (capacity - 1) * 2,
 	}
 }
 
-// normalize input
-func normalize(s string) string {
+// canonical ID
+func canon(s string) string {
+	return strings.ToUpper(strings.TrimSpace(s))
+}
+
+// alias normalization
+func aliasKey(s string) string {
 	return strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(s), " ", ""))
 }
 
-// AddTeam registers team
+// fixture key (order independent)
+func fixtureKey(a, b string) string {
+	if a < b {
+		return a + "|" + b
+	}
+	return b + "|" + a
+}
+
+// AddTeam
 func (l *League) AddTeam(name string) error {
 	if len(l.Teams) >= l.Capacity {
 		return errors.New("league is full")
 	}
 
-	key := normalize(name)
+	id := canon(name)
 
-	if _, exists := l.Teams[key]; exists {
+	if _, exists := l.Teams[id]; exists {
 		return errors.New("team already exists: " + name)
 	}
 
-	t := &team.Team{
+	l.Teams[id] = &team.Team{
 		Name:  name,
 		Alias: team.GenerateAlias(name),
 	}
 
-	l.Teams[key] = t
-	l.Order = append(l.Order, key)
-
 	return nil
 }
 
-// resolve team safely
-func (l *League) resolve(input string) (*team.Team, error) {
-	key := normalize(input)
+// resolve team
+func (l *League) resolve(input string) (*team.Team, string, error) {
+	raw := strings.TrimSpace(input)
 
-	if t, ok := l.Teams[key]; ok {
-		return t, nil
+	if t, ok := l.Teams[canon(raw)]; ok {
+		return t, canon(raw), nil
 	}
 
-	// alias fallback
-	for _, t := range l.Teams {
-		if normalize(t.Alias) == key {
-			return t, nil
+	for id, t := range l.Teams {
+		if aliasKey(t.Alias) == aliasKey(raw) {
+			return t, id, nil
 		}
 	}
 
-	return nil, errors.New("unknown team: " + input)
+	for id, t := range l.Teams {
+		if strings.EqualFold(t.Name, raw) {
+			return t, id, nil
+		}
+	}
+
+	return nil, "", errors.New("unknown team: " + input)
 }
 
-// RecordMatch updates stats
+// check if league ended
+func (l *League) checkFinished() {
+	for _, t := range l.Teams {
+		if t.Played < l.maxGames {
+			return
+		}
+	}
+
+	l.finished = true
+
+	// determine winner
+	var top *team.Team
+
+	for _, t := range l.Teams {
+		if top == nil ||
+			t.Points > top.Points ||
+			(t.Points == top.Points && t.GoalDifference() > top.GoalDifference()) {
+			top = t
+		}
+	}
+
+	l.winner = top
+}
+
+// RecordMatch with full constraints
 func (l *League) RecordMatch(home, away string, hg, ag int) error {
-	if normalize(home) == normalize(away) {
+	if l.finished {
+		return errors.New("league has ended")
+	}
+
+	if strings.EqualFold(home, away) {
 		return errors.New("team cannot play itself")
 	}
 
-	homeTeam, err := l.resolve(home)
+	homeTeam, homeID, err := l.resolve(home)
 	if err != nil {
 		return err
 	}
 
-	awayTeam, err := l.resolve(away)
+	awayTeam, awayID, err := l.resolve(away)
 	if err != nil {
 		return err
 	}
 
+	// per-team limit check
+	if homeTeam.Played >= l.maxGames || awayTeam.Played >= l.maxGames {
+		return errors.New("one of the teams has reached maximum games")
+	}
+
+	fKey := fixtureKey(homeID, awayID)
+
+	if l.fixtures[fKey] >= 2 {
+		return errors.New("this fixture already played twice")
+	}
+
+	l.fixtures[fKey]++
+
+	// update stats
 	homeTeam.Played++
 	awayTeam.Played++
 
@@ -109,10 +171,12 @@ func (l *League) RecordMatch(home, away string, hg, ag int) error {
 		awayTeam.Points++
 	}
 
+	l.checkFinished()
+
 	return nil
 }
 
-// Standings returns sorted table
+// Standings
 func (l *League) Standings() []*team.Team {
 	list := []*team.Team{}
 
@@ -131,4 +195,19 @@ func (l *League) Standings() []*team.Team {
 	})
 
 	return list
+}
+
+// IsFinished returns league status
+func (l *League) IsFinished() bool {
+	return l.finished
+}
+
+// Winner returns champion
+func (l *League) Winner() *team.Team {
+	return l.winner
+}
+
+// MaxGames returns limit per team
+func (l *League) MaxGames() int {
+	return l.maxGames
 }

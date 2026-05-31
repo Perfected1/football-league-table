@@ -42,6 +42,21 @@ func main() {
 	fmt.Println("\nMATCH INPUT READY (case-insensitive, alias supported)\n")
 
 	for {
+		// 🚨 STOP IF LEAGUE HAS ENDED
+		if l.IsFinished() {
+			fmt.Println("\n🏁 LEAGUE HAS ENDED")
+
+			w := l.Winner()
+			if w != nil {
+				fmt.Printf("🏆 CHAMPION: %s (%d pts)\n",
+					team.TitleCase(w.Name),
+					w.Points,
+				)
+			}
+
+			break
+		}
+
 		fmt.Print("Enter match: ")
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
@@ -56,8 +71,8 @@ func main() {
 			continue
 		}
 
-		home := parts[0]
-		away := parts[1]
+		home := strings.TrimSpace(parts[0])
+		away := strings.TrimSpace(parts[1])
 
 		hg, e1 := strconv.Atoi(strings.TrimSpace(parts[2]))
 		ag, e2 := strconv.Atoi(strings.TrimSpace(parts[3]))
@@ -79,16 +94,16 @@ func main() {
 			"Team", "P", "W", "D", "L", "GD", "GF", "Pts")
 
 		for _, t := range l.Standings() {
-	fmt.Printf("%-25s %-3d %-3d %-3d %-3d %-4d %-4d %-4d\n",
-		team.TitleCase(t.Name),
-		t.Played,
-		t.Won,
-		t.Drawn,
-		t.Lost,
-		t.GoalDifference(),
-		t.GoalsFor,
-		t.Points,
-	)
+			fmt.Printf("%-25s %-3d %-3d %-3d %-3d %-4d %-4d %-4d\n",
+				team.TitleCase(t.Name),
+				t.Played,
+				t.Won,
+				t.Drawn,
+				t.Lost,
+				t.GoalDifference(),
+				t.GoalsFor,
+				t.Points,
+			)
 		}
 
 		fmt.Println()
