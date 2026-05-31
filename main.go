@@ -15,7 +15,7 @@ type Team struct {
 }
 
 func main() {
-	// Create a list of teams in the league.
+	// Teams participating in the league.
 	teams := []Team{
 		{Name: "Arsenal"},
 		{Name: "Chelsea"},
@@ -23,11 +23,24 @@ func main() {
 		{Name: "Manchester City"},
 	}
 
-	fmt.Println("Football League Table")
+	fmt.Println("FOOTBALL LEAGUE TABLE")
 	fmt.Println()
 
-	// Show all teams currently in the league.
+	// Print table header.
+	fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s\n",
+		"Team", "P", "W", "D", "L", "GF", "GA", "Pts")
+
+	// Print a line for each team.
 	for _, team := range teams {
-		fmt.Println(team.Name)
+		fmt.Printf("%-20s %-3d %-3d %-3d %-3d %-4d %-4d %-4d\n",
+			team.Name,
+			team.Played,
+			team.Won,
+			team.Drawn,
+			team.Lost,
+			team.GoalsFor,
+			team.GoalsAgainst,
+			team.Points,
+		)
 	}
 }
