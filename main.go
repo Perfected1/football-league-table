@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // Team stores information about a football club.
 type Team struct {
@@ -14,6 +17,11 @@ type Team struct {
 	Points       int
 }
 
+// GoalDifference calculates GD dynamically.
+func (t Team) GoalDifference() int {
+	return t.GoalsFor - t.GoalsAgainst
+}
+
 // findTeam returns a pointer to a team in the slice.
 func findTeam(teams []Team, name string) *Team {
 	for i := range teams {
@@ -24,8 +32,8 @@ func findTeam(teams []Team, name string) *Team {
 	return nil
 }
 
-// recordMatch updates team stats based on match result.
-func recordMatch(teams []Team, home string, away string, homeGoals, awayGoals int) {
+// recordMatch updates stats after a match.
+func recordMatch(teams []Team, home, away string, homeGoals, awayGoals int) {
 	homeTeam := findTeam(teams, home)
 	awayTeam := findTeam(teams, away)
 
@@ -33,18 +41,15 @@ func recordMatch(teams []Team, home string, away string, homeGoals, awayGoals in
 		return
 	}
 
-	// Update played games
 	homeTeam.Played++
 	awayTeam.Played++
 
-	// Update goals
 	homeTeam.GoalsFor += homeGoals
 	homeTeam.GoalsAgainst += awayGoals
 
 	awayTeam.GoalsFor += awayGoals
 	awayTeam.GoalsAgainst += homeGoals
 
-	// Decide result
 	if homeGoals > awayGoals {
 		homeTeam.Won++
 		homeTeam.Points += 3
@@ -69,20 +74,31 @@ func main() {
 		{Name: "Manchester City"},
 	}
 
-	// Record some league matches
-recordMatch(teams, "Arsenal", "Chelsea", 2, 1)
-recordMatch(teams, "Liverpool", "Manchester City", 1, 1)
-recordMatch(teams, "Arsenal", "Liverpool", 3, 0)
-recordMatch(teams, "Manchester City", "Chelsea", 2, 0)
+	// Sample fixtures to populate the table.
+	recordMatch(teams, "Arsenal", "Chelsea", 2, 1)
+	recordMatch(teams, "Liverpool", "Manchester City", 1, 1)
+	recordMatch(teams, "Arsenal", "Liverpool", 3, 0)
+	recordMatch(teams, "Manchester City", "Chelsea", 2, 0)
+
+	// Sort league table
+	sort.Slice(teams, func(i, j int) bool {
+		if teams[i].Points == teams[j].Points {
+			if teams[i].GoalDifference() == teams[j].GoalDifference() {
+				return teams[i].GoalsFor > teams[j].GoalsFor
+			}
+			return teams[i].GoalDifference() > teams[j].GoalDifference()
+		}
+		return teams[i].Points > teams[j].Points
+	})
 
 	fmt.Println("FOOTBALL LEAGUE TABLE")
 	fmt.Println()
 
-	fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s\n",
-		"Team", "P", "W", "D", "L", "GF", "GA", "Pts")
+	fmt.Printf("%-20s %-3s %-3s %-3s %-3s %-4s %-4s %-4s %-4s\n",
+		"Team", "P", "W", "D", "L", "GF", "GA", "GD", "Pts")
 
 	for _, team := range teams {
-		fmt.Printf("%-20s %-3d %-3d %-3d %-3d %-4d %-4d %-4d\n",
+		fmt.Printf("%-20s %-3d %-3d %-3d %-3d %-4d %-4d %-4d %-4d\n",
 			team.Name,
 			team.Played,
 			team.Won,
@@ -90,7 +106,9 @@ recordMatch(teams, "Manchester City", "Chelsea", 2, 0)
 			team.Lost,
 			team.GoalsFor,
 			team.GoalsAgainst,
+			team.GoalDifference(),
 			team.Points,
+
 		)
 	}
 }
