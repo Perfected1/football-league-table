@@ -15,12 +15,19 @@ type Team struct {
 }
 
 func main() {
-	// Create a sample team.
-	arsenal := Team{
-		Name: "Arsenal",
+	// Create a list of teams in the league.
+	teams := []Team{
+		{Name: "Arsenal"},
+		{Name: "Chelsea"},
+		{Name: "Liverpool"},
+		{Name: "Manchester City"},
 	}
 
 	fmt.Println("Football League Table")
-	fmt.Println("Team:", arsenal.Name)
-	fmt.Println("Points:", arsenal.Points)
+	fmt.Println()
+
+	// Show all teams currently in the league.
+	for _, team := range teams {
+		fmt.Println(team.Name)
+	}
 }
