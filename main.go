@@ -69,8 +69,11 @@ func main() {
 		{Name: "Manchester City"},
 	}
 
-	// Record a match result
-	recordMatch(teams, "Arsenal", "Chelsea", 2, 1)
+	// Record some league matches
+recordMatch(teams, "Arsenal", "Chelsea", 2, 1)
+recordMatch(teams, "Liverpool", "Manchester City", 1, 1)
+recordMatch(teams, "Arsenal", "Liverpool", 3, 0)
+recordMatch(teams, "Manchester City", "Chelsea", 2, 0)
 
 	fmt.Println("FOOTBALL LEAGUE TABLE")
 	fmt.Println()
